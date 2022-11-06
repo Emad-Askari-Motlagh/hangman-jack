@@ -6,14 +6,31 @@ var hidden;
 var deck;
 const initiatedCards = new Array(1).fill("card");
 var canHit = true;
-
+let hitButton;
 window.onload = function () {
+  hitButton = document.getElementById("hit");
   buildDeck();
   shuffleDeck();
   startGame();
 };
 
-function buildDeck() {
+const Card = {
+  name: "card",
+  animateCard(el, animationName) {
+    if (!el) return;
+
+    return (el.style.animation = `${animationName} 0.3s linear alternate`);
+  },
+  animateCard1() {
+    let cardImg = document.createElement("img");
+    let card = deck.pop();
+    cardImg.src = "./cards/" + card + ".png";
+    Card.animateCard(cardImg, "animation");
+    cardImg.style.animation = "animate 0.5s linear alternate";
+  },
+};
+
+function buildDeck(animationName) {
   let values = [
     "A",
     "2",
@@ -34,16 +51,26 @@ function buildDeck() {
 
   for (let i = 0; i < types.length; i++) {
     for (let j = 0; j < values.length; j++) {
-      deck.push(values[j] + "-" + types[i]); //A-C -> K-C, A-D -> K-D
+      deck.push(values[j] + "-" + types[i]);
     }
   }
   // console.log(deck);
 }
 
+function stopTheGame() {
+  dealerSum = calcSum(dealerSum);
+  yourSum = calcSum(yourSum);
+  canHit = false;
+  const hiddenCard = document.getElementById("hidden");
+  hiddenCard.src = "./cards/" + hidden + ".png";
+  Card.animateCard(hiddenCard, "animate-hidden");
+  document.getElementById("hit").setAttribute("disabled", true);
+  document.getElementById("stay").setAttribute("disabled", true);
+}
+
 function shuffleDeck() {
-  const cards = new Array(deck.length).fill("card");
   deck.forEach((element, i) => {
-    let j = Math.floor(Math.random() * deck.length); // (0-1) * 52 => (0-51.9999)
+    let j = Math.floor(Math.random() * deck.length);
     let temp = deck[i];
     deck[i] = deck[j];
     deck[j] = temp;
@@ -54,13 +81,13 @@ function dealerRun() {
   hidden = deck.pop();
   dealerSum += getValue(hidden);
   dealerAceCount += checkAce(hidden);
-
   stayButton.setAttribute("disabled", true);
-
   while (dealerSum < 17) {
     let cardImg = document.createElement("img");
     let card = deck.pop();
     cardImg.src = "./cards/" + card + ".png";
+    Card.animateCard(cardImg, "animation");
+    cardImg.style.animation = "animate 0.5s linear alternate";
     dealerSum += getValue(card);
     dealerAceCount += checkAce(card);
     document
@@ -68,53 +95,76 @@ function dealerRun() {
       .insertAdjacentElement("afterbegin", cardImg);
   }
 }
+
 function startGame() {
   dealerRun();
   initiatedCards.map((res, i) => {
     let cardImg = document.createElement("img");
     let card = deck.pop();
     cardImg.src = "./cards/" + card + ".png";
+    Card.animateCard(cardImg, "animation");
     yourSum += getValue(card);
     yourAceCount += checkAce(card);
     document.getElementById("your-cards").append(cardImg);
   });
-
   document.getElementById("hit").addEventListener("click", hit);
   document.getElementById("stay").addEventListener("click", stay);
 }
 
 function hit() {
-  if (!canHit) {
-    return;
-  }
   const stayButton = document.getElementById("stay");
   stayButton.removeAttribute("disabled");
   let cardImg = document.createElement("img");
+  cardImg.style.animation = "animate 0.5s linear alternate";
+  Card.animateCard(cardImg, "animate");
   let card = deck.pop();
   cardImg.src = "./cards/" + card + ".png";
   yourSum += getValue(card);
   yourAceCount += checkAce(card);
   document.getElementById("your-cards").append(cardImg);
-
-  if (reduceAce(yourSum, yourAceCount) > 21) {
-    //A, J, 8 -> 1 + 10 + 8
-    canHit = false;
+  dealerSum = calcSum(dealerSum);
+  yourSum = calcSum(yourSum);
+  if (yourSum > 21) {
+    message = "You Lose!";
+    stopTheGame();
+    showResult(message, false);
+  } else if (dealerSum > 21) {
+    message = "You win!";
   }
 }
 
-function stay() {
-  const confirm = document.querySelector(".confirm-button");
-  confirm.textContent = "ok";
-  confirm.style.backgroundColor = "#282828";
-  dealerSum = reduceAce(dealerSum, dealerAceCount);
-  yourSum = reduceAce(yourSum, yourAceCount);
-
-  canHit = false;
-  document.getElementById("hidden").src = "./cards/" + hidden + ".png";
+function showResult(message, isOpen) {
   const resultButton = document.getElementById("results");
+  if (!resultButton) return;
+  setTimeout(() => {
+    const confirm = document.querySelector(".confirm-button");
+    confirm.textContent = "Play again";
+    confirm.style.backgroundColor = "#182828";
+    if (!isOpen) {
+      resultButton.classList.add("results-show");
+      confirm.addEventListener("click", () => {
+        confirm.textContent = null;
+        //REload the page to play again
+        location.reload();
+      });
+    } else {
+      resultButton.classList.remove("results-show");
+    }
+    document.getElementById("dealer-sum").innerText = dealerSum;
+    document.getElementById("your-sum").innerText = yourSum;
+    document.getElementById(
+      "results-p"
+    ).innerHTML = `<div><div>${message}</div><div>${yourSum} vs ${dealerSum}</div> </div>`;
+  }, 300);
+}
+
+function stay() {
+  stopTheGame();
   let showModal = false;
   let message = "";
+  hitButton.setAttribute("disabled", true);
 
+  //you and dealer goes up to 21
   if (yourSum > 21) {
     message = "You Lose!";
     showModal = true;
@@ -134,21 +184,8 @@ function stay() {
     showModal = true;
   }
   if (showModal) {
-    resultButton.classList.add("results-show");
-    confirm.textContent = "Play Again";
+    showResult(message, false);
   }
-  confirm.addEventListener("click", () => {
-    resultButton.classList.remove("results-show");
-    confirm.textContent = null;
-
-    //REload the page to play again
-    location.reload();
-  });
-  document.getElementById("dealer-sum").innerText = dealerSum;
-  document.getElementById("your-sum").innerText = yourSum;
-  document.getElementById(
-    "results-p"
-  ).innerHTML = `<div><div>${message}</div><div>${yourSum} vs ${dealerSum}</div> </div>`;
 }
 
 function getValue(card) {
@@ -156,7 +193,6 @@ function getValue(card) {
   let value = data[0];
   let types = ["C", "D", "H", "S"];
   if (isNaN(value)) {
-    //A J Q K
     if (value == "A") {
       return 11;
     }
@@ -172,10 +208,6 @@ function checkAce(card) {
   return 0;
 }
 
-function reduceAce(playerSum, playerAceCount) {
-  while (playerSum > 21 && playerAceCount > 0) {
-    playerSum -= 10;
-    playerAceCount -= 1;
-  }
+function calcSum(playerSum) {
   return playerSum;
 }

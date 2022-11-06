@@ -1,14 +1,22 @@
 var mistkaesCount = 0;
 let guesses = [];
 let currentGuess = "";
-const winWord = "ok";
+let guessList = [
+  {
+    type: "sport",
+    words: ["basketball"],
+  },
+  {
+    type: "sience",
+    words: ["cell", "chemical", "chemistry", "climate", "climatologist"],
+  },
+];
+const wordObj = { type: "", word: "" };
+const winWord = "";
 const classes = null;
 const hangClasses = ["scaffold", "head", "body", "arms", "legs"];
 let guessWord = new Array(winWord.length).fill(undefined);
-// document.querySelector("figure").classList.add("head");
-// document.querySelector("figure").classList.add("body");
-// document.querySelector("figure").classList.add("arms");
-// document.querySelector("figure").classList.add("legs");
+
 var alphabet = [
   "a",
   "b",
@@ -39,9 +47,21 @@ var alphabet = [
 ];
 
 window.onload = function () {
+  findGuessWord();
   start();
   ClickAlphabet();
 };
+
+function findGuessWord() {
+  const categoryEl = document.getElementById("category");
+  const randomCat = Math.floor(Math.random() * guessWord.length + 0);
+  const randomWord = Math.floor(
+    Math.random() * guessList[randomCat].words.length + 0
+  );
+  wordObj.type = guessList[randomCat].type;
+  wordObj.word = guessList[randomCat].words[randomWord];
+  categoryEl.textContent = wordObj.type;
+}
 
 function ClickAlphabet() {
   const alphabetItems = document.querySelectorAll("#alphabet-item");
@@ -92,6 +112,7 @@ function drawHangPieces() {
       console.log("2 mistake");
       head.style.display = "flex";
       arms.style.transition = "all 2s ease-in";
+      arms.setAttribute("fill", "red");
       return;
     case 3:
       console.log("3 mistake");
@@ -105,28 +126,36 @@ function drawHangPieces() {
     case 5:
       console.log("4 mistake");
       legs.style.display = "flex";
-      return;
-    case 6:
       gameOver();
       return;
   }
 }
 
 function checkTheChar() {
+  const figure = document.querySelector(".figure");
   const container = document.getElementById("guesses-show");
   let showCaseItem = document.querySelector(".guess-item");
   let found;
 
+  const winWord = wordObj.word;
+
   for (let i = 0; i < winWord.length; i++) {
     if (winWord[i] === currentGuess) {
       container.children[i].textContent = currentGuess;
+      console.log(winWord.indexOf(winWord[i]));
       guessWord.splice(i, 1, currentGuess);
       found = true;
     }
+
+    console.log(guessWord);
   }
+
   if (!found) {
+    figure.style.animationPlayState = "running";
     mistkaesCount++;
     drawHangPieces();
+  } else {
+    figure.style.animationPlayState = "paused";
   }
   if (JSON.stringify(guessWord) == JSON.stringify(Array.from(winWord))) {
     const winCard = document.getElementById("win-card");
@@ -149,11 +178,11 @@ function start() {
     const liItem = document.createElement("li");
     liItem.id = "alphabet-item";
     liItem.textContent = alphabet[i];
-    ul.insertAdjacentElement("afterbegin", liItem);
+    ul.insertAdjacentElement("beforeend", liItem);
   }
 
   //Show guesses
-
+  const winWord = wordObj.word;
   Array.from(winWord).forEach((element) => {
     const el = document.createElement("span");
     el.style.margin = "10px";
